@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>    Recita</title>
+    <style>
+        /* General Styles */
+        * {
+            padding: 0;
+            margin: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f0f4f8;
+            color: #333;
+        }
+
+        #main {
+            width: 100%;
+            min-height: calc(100vh - 150px);
+            padding: 20px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            justify-content: center;
+            background-color: #e9f5f9;
+            margin-top: 130px;
+        }
+
+        #addBtn {
+            position: fixed;
+            left: 18px;
+            top: 10px;
+            background-color: #007bff;
+            color: white;
+            padding: 10px 20px;
+            border: 0;
+            outline: 0;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+
+        #addBtn:hover {
+            background-color: #0056b3;
+        }
+
+        .search-bar {
+            position: fixed;
+            top: 60px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 80%;
+            max-width: 500px;
+            margin: 10px auto;
+            text-align: center;
+            z-index: 10;
+        }
+
+        .search-bar input {
+            width: 100%;
+            padding: 10px;
+            font-size: 16px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            outline: none;
+        }
+
+        .note {
+            width: 200px;
+            height: 250px;
+            background-color: white;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            padding: 10px;
+            transition: transform 0.2s ease;
+        }
+
+        .note.hidden {
+            visibility: hidden;
+            pointer-events: none;
+            height: 0;
+            margin: 0;
+            padding: 0;
+        }
+
+        .note:hover {
+            transform: scale(1.05);
+        }
+
+        .icons {
+            background-color: #007bff;
+            color: white;
+            display: flex;
+            justify-content: space-between;
+            padding: 5px;
+            border-radius: 5px;
+        }
+
+        .icons i {
+            cursor: pointer;
+            font-size: 16px;
+        }
+
+        .icons i:hover {
+            color: #ffc107;
+        }
+
+        .note textarea {
+            width: 100%;
+            padding: 5px;
+            border: none;
+            font-size: 14px;
+            resize: none;
+            outline: none;
+        }
+
+        .note textarea.title {
+            background-color: #f8f9fa;
+            font-weight: bold;
+            font-size: 14px;
+            border-bottom: 1px solid #ddd;
+        }
+
+        .note .content {
+            background-color: #fffdfd;
+            height: 70px;
+        }
+
+        .note .tags {
+            background-color: #eaf7f7;
+            border-top: 1px solid #ddd;
+            padding: 5px;
+            font-size: 12px;
+        }
+
+        .file-upload {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin-top: 5px;
+        }
+
+        .file-upload button {
+            width: 100%;
+            padding: 5px;
+            background-color: #28a745;
+            color: white;
+            font-size: 12px;
+            border: 0;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        .file-upload button:hover {
+            background-color: #1c7c31;
+        }
+
+        .file-preview {
+            margin-top: 5px;
+            font-size: 12px;
+            text-align: center;
+            color: #555;
+        }
+
+        .file-preview img {
+            max-width: 100%;
+            max-height: 50px;
+            display: block;
+            margin: 0 auto;
+        }
+
+        /* Mobile Styles */
+        @media (max-width: 768px) {
+            #addBtn {
+                font-size: 14px;
+                padding: 8px 16px;
+            }
+
+            .note {
+                width: 150px;
+                height: 220px;
+            }
+
+            .note textarea {
+                font-size: 12px;
+            }
+
+            .note .tags {
+                font-size: 10px;
+            }
+
+            .file-preview img {
+                max-height: 40px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="btn">
+        <div class="heading">
+            <h1 style="text-align: center; color: #007bff;">   Recita</h1>
+        </div>
+        <button id="addBtn">+ Add Receipt</button>
+    </div>
+    <div class="search-bar">
+        <input type="text" id="search" placeholder="Search receipts...">
+    </div>
+    <div id="main"></div>
+    <script src="https://kit.fontawesome.com/bf520e6492.js" crossorigin="anonymous"></script>
+    <script>
+        const addBtn = document.querySelector("#addBtn");
+        const main = document.querySelector("#main");
+        const searchInput = document.querySelector("#search");
+
+        addBtn.addEventListener("click", () => addNote());
+
+// Update the search functionality to include date
+searchInput.addEventListener("keyup", function () {
+    const query = this.value.toLowerCase();
+    const notes = document.querySelectorAll(".note");
+    notes.forEach((note) => {
+        const tags = note.querySelector(".tags").value.toLowerCase();
+        const date = note.querySelector(".date").textContent.toLowerCase(); // Include date in the search
+        if (tags.includes(query) || date.includes(query)) {
+            note.classList.remove("hidden");
+        } else {
+            note.classList.add("hidden");
+        }
+    });
+});
+
+// Update the addNote function to include the date span
+const addNote = (title = "", content = "", tags = "", filePreview = "", createdDate = null) => {
+    const note = document.createElement("div");
+    note.classList.add("note");
+
+    // Get the current date if no createdDate is passed
+    const date = createdDate || new Date().toLocaleString();
+
+    note.innerHTML = `
+        <div class="icons">
+            <span class="date">${date}</span>
+            <i class="trash fas fa-trash"></i>
+        </div>
+        <textarea class="title" placeholder="Title">${title}</textarea>
+        <textarea class="content" placeholder="Write your note...">${content}</textarea>
+        <textarea class="tags" placeholder="Tags (comma separated)...">${tags}</textarea>
+        <div class="file-upload">
+            <button class="add-file-btn">Add Files</button>
+            <div class="file-preview">${filePreview}</div>
+        </div>
+    `;
+
+    note.querySelector(".trash").addEventListener("click", () => {
+        note.remove();
+        saveNotes();
+    });
+
+    note.querySelector(".add-file-btn").addEventListener("click", () => {
+        const fileInput = document.createElement("input");
+        fileInput.type = "file";
+        fileInput.accept = "image/*, .pdf, .doc, .txt";
+        fileInput.style.display = "none";
+        document.body.appendChild(fileInput);
+
+        fileInput.addEventListener("change", () => {
+            const file = fileInput.files[0];
+            if (file) {
+                if (file.type.startsWith("image/")) {
+                    const reader = new FileReader();
+                    reader.onload = (e) => {
+                        note.querySelector(".file-preview").innerHTML = `<img src="${e.target.result}" alt="Preview">`;
+                        saveNotes();
+                    };
+                    reader.readAsDataURL(file);
+                } else {
+                    note.querySelector(".file-preview").textContent = `File: ${file.name}`;
+                    saveNotes();
+                }
+            }
+            document.body.removeChild(fileInput);
+        });
+
+        fileInput.click();
+    });
+
+    main.appendChild(note);
+    saveNotes();
+};
+
+// Update the saveNotes function to save the date
+const saveNotes = () => {
+    const notes = Array.from(document.querySelectorAll(".note")).map(note => {
+        const title = note.querySelector(".title").value;
+        const content = note.querySelector(".content").value;
+        const tags = note.querySelector(".tags").value;
+        const filePreview = note.querySelector(".file-preview").innerHTML;
+        const createdDate = note.querySelector(".date").textContent; // Save the displayed date
+        return { title, content, tags, filePreview, createdDate };
+    });
+    localStorage.setItem("notes", JSON.stringify(notes));
+};
+
+// Load notes from localStorage
+const loadNotes = () => {
+    const savedNotes = JSON.parse(localStorage.getItem("notes")) || [];
+    savedNotes.forEach(({ title, content, tags, filePreview, createdDate }) =>
+        addNote(title, content, tags, filePreview, createdDate)
+    );
+};
+
+loadNotes();
+
+
+    </script>
+</body>
+
+</html>
