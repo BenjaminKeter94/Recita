@@ -8,6 +8,31 @@
     <title>    Recita</title>
     <style>
         /* General Styles */
+      .share-btn {
+    width: 100%;
+    padding: 8px 12px;
+    background-color: #17a2b8;
+    color: white;
+    font-size: 14px;
+    font-weight: bold;
+    text-align: center;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    margin-top: 10px;
+    transition: background-color 0.3s ease, transform 0.2s ease;
+}
+
+.share-btn:hover {
+    background-color: #138496;
+    transform: scale(1.05);
+}
+
+.share-btn:active {
+    background-color: #0f6e74;
+    transform: scale(0.95);
+}
+
     #tag-menu {
         position: fixed;
         left: 10px;
@@ -249,21 +274,20 @@
     <div id="main"></div>
     <script src="https://kit.fontawesome.com/bf520e6492.js" crossorigin="anonymous"></script>
     <script>
-        const addBtn = document.querySelector("#addBtn");
-        const main = document.querySelector("#main");
-        const searchInput = document.querySelector("#search");
+const addBtn = document.querySelector("#addBtn");
+const main = document.querySelector("#main");
+const searchInput = document.querySelector("#search");
 
-        addBtn.addEventListener("click", () => addNote());
+addBtn.addEventListener("click", () => addNote());
 
-// Update the search functionality to include date
+// Update the search functionality to include date and title only
 searchInput.addEventListener("keyup", function () {
     const query = this.value.toLowerCase();
     const notes = document.querySelectorAll(".note");
     notes.forEach((note) => {
-        const title = note.querySelector(".title").value.toLowerCase(); // Include title in the search
-        const tags = note.querySelector(".tags").value.toLowerCase();
-        const date = note.querySelector(".date").textContent.toLowerCase(); // Include date in the search
-        if (title.includes(query) || tags.includes(query) || date.includes(query)) {
+        const title = note.querySelector(".title").value.toLowerCase();
+        const date = note.querySelector(".date").textContent.toLowerCase();
+        if (title.includes(query) || date.includes(query)) {
             note.classList.remove("hidden");
         } else {
             note.classList.add("hidden");
@@ -271,45 +295,8 @@ searchInput.addEventListener("keyup", function () {
     });
 });
 
-
-const tagList = document.querySelector("#tag-list");
-
-// Function to update the tag menu
-const updateTagMenu = () => {
-    const notes = document.querySelectorAll(".note");
-    const tagsSet = new Set();
-
-    notes.forEach((note) => {
-        const tags = note.querySelector(".tags").value.split(",").map(tag => tag.trim());
-        tags.forEach(tag => {
-            if (tag) tagsSet.add(tag);
-        });
-    });
-
-    tagList.innerHTML = ""; // Clear the menu
-    tagsSet.forEach(tag => {
-        const li = document.createElement("li");
-        li.textContent = tag;
-        li.addEventListener("click", () => filterNotesByTag(tag));
-        tagList.appendChild(li);
-    });
-};
-
-// Function to filter notes by a specific tag
-const filterNotesByTag = (tag) => {
-    const notes = document.querySelectorAll(".note");
-    notes.forEach((note) => {
-        const tags = note.querySelector(".tags").value.split(",").map(tag => tag.trim());
-        if (tags.includes(tag)) {
-            note.classList.remove("hidden");
-        } else {
-            note.classList.add("hidden");
-        }
-    });
-};
-
-// Update the addNote function to refresh the tag menu whenever a note is added
-const addNote = (title = "", content = "", tags = "", filePreview = "", createdDate = null) => {
+// Update the addNote function
+const addNote = (title = "", content = "", filePreview = "", createdDate = null) => {
     const note = document.createElement("div");
     note.classList.add("note");
 
@@ -322,7 +309,6 @@ const addNote = (title = "", content = "", tags = "", filePreview = "", createdD
         </div>
         <textarea class="title" placeholder="Title">${title}</textarea>
         <textarea class="content" placeholder="Write your note...">${content}</textarea>
-        <textarea class="tags" placeholder="Tags (comma separated)...">${tags}</textarea>
         <div class="file-upload">
             <button class="add-file-btn">Add Files</button>
             <div class="file-preview">${filePreview}</div>
@@ -334,7 +320,6 @@ const addNote = (title = "", content = "", tags = "", filePreview = "", createdD
     note.querySelector(".trash").addEventListener("click", () => {
         note.remove();
         saveNotes();
-        updateTagMenu(); // Refresh tag menu
     });
 
     // File upload functionality
@@ -367,37 +352,74 @@ const addNote = (title = "", content = "", tags = "", filePreview = "", createdD
     });
 
     // Share note functionality
-    note.querySelector(".share-btn").addEventListener("click", () => {
+    note.querySelector(".share-btn").addEventListener("click", async () => {
         const noteTitle = note.querySelector(".title").value.trim();
         const noteContent = note.querySelector(".content").value.trim();
-        const noteTags = note.querySelector(".tags").value.trim();
         const noteDate = note.querySelector(".date").textContent;
+        const filePreview = note.querySelector(".file-preview img");
 
-        const emailSubject = encodeURIComponent(`Sharing Note: ${noteTitle || "Untitled Note"}`);
-        const emailBody = encodeURIComponent(`Here is a note I wanted to share with you:\n\n` +
-            `Title: ${noteTitle}\n` +
-            `Date: ${noteDate}\n\n` +
-            `Content:\n${noteContent}\n\n` +
-            `Tags: ${noteTags}\n\n`);
+        const shareData = {
+            title: noteTitle || "Untitled Note",
+            text: `Here is a note I wanted to share with you:\n\n` +
+                `Title: ${noteTitle}\n` +
+                `Date: ${noteDate}\n\n` +
+                `Content:\n${noteContent}\n\n`,
+        };
 
-        window.location.href = `mailto:?subject=${emailSubject}&body=${emailBody}`;
+        // If an image is attached, include it in the share
+        if (filePreview) {
+            try {
+                const response = await fetch(filePreview.src);
+                const blob = await response.blob();
+                const file = new File([blob], "image.png", { type: blob.type });
+                shareData.files = [file];
+            } catch (error) {
+                console.error("Failed to include the image in sharing:", error);
+            }
+        }
+
+        if (navigator.share) {
+            try {
+                await navigator.share(shareData);
+                alert("Note shared successfully!");
+            } catch (error) {
+                console.error("Error sharing the note:", error);
+            }
+        } else {
+            const emailSubject = encodeURIComponent(`Sharing Note: ${noteTitle || "Untitled Note"}`);
+            const emailBody = encodeURIComponent(shareData.text);
+            window.location.href = `mailto:?subject=${emailSubject}&body=${emailBody}`;
+        }
     });
 
     main.appendChild(note);
     saveNotes();
-    updateTagMenu(); // Refresh tag menu after adding a note
 };
 
-// Ensure the tag menu is updated when notes are loaded from localStorage
+// Save notes to localStorage
+const saveNotes = () => {
+    const notes = [];
+    document.querySelectorAll(".note").forEach((note) => {
+        notes.push({
+            title: note.querySelector(".title").value,
+            content: note.querySelector(".content").value,
+            filePreview: note.querySelector(".file-preview").innerHTML,
+            createdDate: note.querySelector(".date").textContent,
+        });
+    });
+    localStorage.setItem("notes", JSON.stringify(notes));
+};
+
+// Load notes from localStorage
 const loadNotes = () => {
     const savedNotes = JSON.parse(localStorage.getItem("notes")) || [];
-    savedNotes.forEach(({ title, content, tags, filePreview, createdDate }) =>
-        addNote(title, content, tags, filePreview, createdDate)
+    savedNotes.forEach(({ title, content, filePreview, createdDate }) =>
+        addNote(title, content, filePreview, createdDate)
     );
-    updateTagMenu(); // Refresh tag menu after loading notes
 };
 
 loadNotes();
+
 
     </script>
 </body>
